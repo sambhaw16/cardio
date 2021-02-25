@@ -1,0 +1,1276 @@
+---
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+
+
+#Descriptive analysis
+
+Descriptive analysis is an important first step for conducting statistical analysis. This involves 
+Descriptive analysis for each individual variable
+Descriptive analysis for combinations of variables
+
+First importing the dataset into R-studio and removing Id we get our first look at data, Now we have 12 variables.
+Total number of observations (n) -- 68586
+Number of parameters --  If we go with logistic regression then we will have 11+1 parameters, Weight associated with each variable and W0.
+Predictor variables -- 11
+Response variable -- 1
+
+
+1. age: in days.
+2. gender: 1 - women, 2 – men.
+3. height: in cm.
+4. weight: in kgs.
+5. ap_hi: Systolic blood pressure
+6. ap_lo: Diastolic blood pressure.
+7. cholesterol: 1: normal, 2: above normal, 3: well above normal.
+8. gluc: 1: normal, 2: above normal, 3: well above normal.
+9. smoke: whether the patient smokes or not.
+10. alco: Alcohol intake
+11. active: Physical activity.
+12. cardio: Presence or absence of cardiovascular disease.
+
+```{r message=FALSE, warning=FALSE}
+#Importing the required libraries
+library(ggplot2) 
+require(ggiraph)
+require(ggiraphExtra)
+require(plyr)
+library(ROCR)
+library(Hmisc)
+library(tidyverse)
+library(caret)
+library(caretEnsemble)
+library(psych)
+library(Amelia)
+library(mice)
+library(GGally)
+library(rpart)
+library(randomForest)
+library(class)
+library(e1071)
+library(gmodels)
+library(randomForest)
+library (ISLR)
+library (boot)
+library(MASS)
+library(gam)
+library(glmnet)
+#Printing the current R version
+R.version.string 
+```
+
+Importing the data from csv into a data frame using read.csv() method
+```{r}
+data <- read.csv('C:\\Users\\Sambhaw\\Desktop\\777 fall 2020\\project\\cardio_train.csv', header = TRUE,
+                 sep = ";", quote = "\"", dec = ".")
+head(data)
+```
+
+Displaying the number of columns in the dataframe
+Displaying the number of rows in the dataframe
+
+```{r}
+print(ncol(data))
+print(nrow(data))
+```
+```{r}
+data <- data[-c(1)]
+```
+
+collecting all the numeric values in a seperate dataframe
+```{r}
+numtab <- data[c(1,3:6)]
+head(numtab)
+```
+
+collecting all the cartegorical data in a seperate dataframe
+```{r}
+catdata <- data[-c(1,3:6)]
+head(catdata)
+```
+
+#Displaying the summary of the numerical data
+
+5 number summery of numric data.
+
+```{r}
+summary(numtab)
+```
+
+This data requires some data cleaning 
+From the summary data above we can see that we have few outliers in the data 
+Removing outliers
+
+```{r}
+data <- subset(data,ap_lo >= 20 & ap_lo <= 190 & ap_hi >= 60 & ap_hi <= 230 & height >= 120 & height <= 210 & weight >= 40 & weight <= 200 & ap_lo < ap_hi)
+```
+
+We can observe that all the data is represented as integers and numeric but we have few categorical data
+solving data type inconsistency issues
+
+```{r}
+data[c(2,7:12)] <- lapply(data[c(2,7:12)],factor)
+nrow(data)
+```
+
+```{r}
+Hmisc::describe(data)
+```
+The datatypes of columns currently present in the dataframe 
+This displays a plot of the datatype of features 
+Reference - https://stackoverflow.com/questions/21125222/determine-the-data-types-of-a-data-frames-columns
+
+```{r}
+
+data_types <- function(frame) {
+  res <- lapply(frame, class)
+  res_frame <- data.frame(unlist(res))
+  barplot(table(res_frame), main="Data Types", col="steelblue", ylab="Number of Features")
+}
+
+data_types(data)
+
+
+```
+
+#Summary statistics
+
+44664 observations are females (gender = 1) and 23922 are males (gender = 2). Similarly, mean, median, and quartiles along with some other statistics for all the data variables obtained from R are shown below
+
+
+```{r}
+summary(data)
+```
+#Plotting histograms for numeric data to display their distribution
+
+Age
+There are 68586 rows with no missing value in this column, here age is given in number of days and Gini's difference is 2824, minimum = 10798, Q1 = 17657 , mean age is 19464, Q3 = 21324, Max = 23713.
+
+
+
+```{r}
+hist(data$age)
+```
+#Height
+
+There are 68586 rows with zero missing value in this column, here height is given in centimeters and Gini's difference is 8.847, minimum = 120, Q1 = 159 , mean is 164.4, Q3 = 170, Max = 207
+
+
+
+```{r}
+hist(data$height)
+```
+
+#Weight
+
+There are 68586 rows with zero missing value in this column, here weight is given in Kilograms and Gini's difference is 15.5, minimum = 40.0, Q1 = 65 , mean is 74.14, Q3 = 82, Max = 200.0
+
+
+```{r}
+hist(data$weight)
+
+```
+
+#Systolic blood pressure
+
+A normal systolic blood pressure is below 120. A reading of 140 or above is considered as high blood pressure. There are 68586 rows with zero missing value in this column, Gini's difference is 17.48, minimum = 60, Q1 = 120 , mean is 126.7, Q3 = 140, Max = 230.
+
+
+
+```{r}
+hist(data$ap_hi)
+
+```
+
+#Diastolic blood pressure
+
+A normal diastolic blood pressure is below 80. A reading of 90 or above is considered as high blood pressure. There are 68586 rows with zero missing value in this column, Gini's difference is 81.29, minimum = 20, Q1 = 80, mean is 81.29, Q3 = 90, Max = 182.
+
+
+
+```{r}
+hist(data$ap_lo)
+```
+#Displaying the bar plots for categorical data representing the number of observations in each category
+
+
+#Gender
+
+This column has no missing data, two distinct values 1, 2 ( 1 - women, 2 – men) with a total of  68586 observations, frequency and percent proportion are given below.
+
+gender 
+           n      missing     distinct 
+       68586           0             2                   
+Value                  1             2
+Frequency          44664         23922
+Proportion         0.651         0.349
+
+
+
+```{r}
+barplot(table(data$gender),main="Gender",
+        xlab="Gender",
+        ylab="Count")
+
+
+```
+#Cholesterol
+
+This column has zero missing data, three distinct values 1, 2, 3 ( 1 - normal, 2 – above normal, 3- well above normal) with a total of 68586 observations.
+
+cholesterol 
+           n      missing     distinct 
+       68586            0                3                            
+Value                  1             2             3
+Frequency          51430          9295          7861
+Proportion         0.750         0.136         0.11
+
+
+```{r}
+barplot(table(data$cholesterol),main="Cholestrol",
+        xlab="Cholestrol",
+        ylab="Count")
+
+
+
+```
+
+#Glucose
+
+This column has zero missing data, three distinct values 1, 2, 3 ( 1 - normal, 2 – above normal, 3- well above normal) with a total of 68586 observations. Frequency and percent proportion are given below.
+
+gluc 
+           n      missing     distinct 
+       68586            0                3 
+Value                  1             2             3
+Frequency          58310          5065          5211
+Proportion         0.850         0.074         0.076
+
+```{r}
+barplot(table(data$gluc),main="Glucose",
+        xlab="Glucose",
+        ylab="Count")
+
+
+```
+#Smoke
+
+This column has no missing data, two distinct binary values ( 0 - Do not smoke, 1 – Smoke) with a total of 68586 observations, frequency and percent proportion are given below.
+
+smoke 
+           n      missing     distinct 
+   68586                0                2 
+                      
+Value                  0             1
+Frequency          62552          6034
+Proportion         0.912         0.088
+
+```{r}
+barplot(table(data$smoke),main="Smoking",
+        xlab="Smoking",
+        ylab="Count")
+
+
+```
+#Alcohol
+
+This column has no missing data, two distinct binary values ( 0 - Do not Drinks, 1 – Drinks) with a total of 68586 observations, frequency and percent proportion are given below.
+
+alco 
+           n      missing     distinct 
+       68586            0                2 
+                      
+Value                  0             1
+Frequency          64927          3659
+Proportion         0.947         0.053
+
+```{r}
+barplot(table(data$alco),main="Alcohol",
+        xlab="Alcohol",
+        ylab="Count")
+
+
+```
+#Active
+
+This column has no missing data, two distinct binary values ( 0 - Inactive, 1 – Active) with a total of 68586 observations, frequency and percent proportion are given below.
+
+active 
+           n         missing       distinct 
+      68586             0                 2 
+Value                  0             1
+Frequency          13491         55095
+Proportion         0.197         0.803
+
+
+```{r}
+barplot(table(data$active),main="Physical Activity",
+        xlab="Physical Activity",
+        ylab="Count")
+
+
+
+```
+#Cardio
+
+This column has no missing data, two distinct binary values ( presence or absence of cardiovascular disease) with a total of 68586 observations, frequency and percent proportion are given below.
+
+
+cardio 
+           n        missing     distinct 
+       68586            0                2 
+                      
+Value                       0                   1
+Frequency           34650           33936
+Proportion            0.505            0.495
+
+
+
+```{r}
+barplot(table(data$cardio),main="Cardio Vascular Disease",
+        xlab="Cardio Vascular Disease",
+        ylab="Count")
+```
+
+
+#Correlation matrix 
+
+The cor() function produces a matrix that contains all of the pairwise correlations among the predictors in a data set. Here we have selected all the variables with numeric fields and tried to find out correlation between those variables as we can see here in below table 
+
+height and age doesn't have any correlation that is because the dataset contains most of the age values from 29 years to 65 years and height does not change for adult humans , similarly weight and age have no relation.
+Age and ap_hi and ap_low are weakly positive correlations with age means there is some probability that with age blood pressure increases.
+Weight and ap_hi and ap_low are weakly positive correlations with age means there is some probability that with weight  blood pressure increases.
+ap_hi and ap_low have very strong positive correlation showing that both types of blood pressure increase together.  
+
+
+```{r}
+str(data[c(1,3:6)])
+cor(data[c(1,3:6)], use="pairwise.complete.obs")
+```
+
+#KNN
+
+Here I will be fitting a KNN model using the knn() function which is included in the class library. This function generally works differently from the other fitting models. Rather than a two-step approach in which we first fit the model and then we use the model to make predictions, knn() forms predictions using a single command. 
+
+It takes four arguments:
+TrainX which is a matrix containing the predictors associated with the training data.
+TestX which is a matrix containing the predictors associated with the testing data.
+TrainDirection which is a vector containing the class labels for the training observations.
+K is the number of neighbors to be used for clustering.
+
+On contrary to logistic regression, for categorical data kNN is unable to be applied directly since it is based on the Euclidean distances. In order to define the distance metrics for categorical variables, the first step of preprocessing of the dataset is to use dummy variables to represent the categorical variables.
+
+dummy <- dummyVars(" ~ .", data=data1)
+newdata <- data.frame(predict(dummy, newdata = data1))
+
+Using the above code I have converted the categorical variable with multiple categories into multiple variables, each with a value of 1 or 0. Except for the response variable I have made all other categorical variables into multiple variables.
+
+ran <- sample(1:nrow(newdata), 0.5 * nrow(newdata))
+trainX <- newdata[c(1:19)][ran,]
+testX <- newdata[c(1:19)][-ran,]
+trainY <- newdata[ran,20]
+trainY <- trainY$cardio
+testY <- newdata[-ran,20]
+testY <- testY$cardio
+
+Using the above code I have split the data into 50% for training and 50% for testing. Where trainX is training predictors and trainY is class labels for training observations. Similarly testX is the predictors for test data and testY are their associated labels. 
+
+pred <- knn(trainX,testX,trainY,k=5)
+
+Using the above line of code we have fit the model. Here we have chosen k as 5 which means the classification algorithm uses 5 nearest neighbors to classify a new point to a cluster.
+
+Creating confusion matrix:
+
+table(pred,testY)
+
+Where 1 represents Presence and 0 represents absence of cardiovascular disease.
+
+accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+
+This function divides the correct predictions by the total number of predictions that tell us how accurate the model is.
+
+
+```{r}
+#KNN
+data1 <- data[c(1:11)]
+ncol(data1)
+#converting the categorical variables to multiple variables with values 0 and 1 only for KNN
+dummy <- dummyVars(" ~ .", data=data1)
+newdata <- data.frame(predict(dummy, newdata = data1))
+newdata$cardio <- data[12]
+
+
+#Splitting the dataset
+ran <- sample(1:nrow(newdata), 0.5 * nrow(newdata))
+
+trainX <- newdata[c(1:19)][ran,]
+testX <- newdata[c(1:19)][-ran,]
+
+
+trainY <- newdata[ran,20]
+trainY <- trainY$cardio
+
+testY <- newdata[-ran,20]
+testY <- testY$cardio
+
+accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+
+i=1
+k.optm=1
+while (i <= 26){
+  knn.mod <- knn(train = trainX, test = testX, cl = trainY, k=i)
+  knn.res <- table(knn.mod,testY)
+  k.optm[i] <- accuracy(knn.res)
+  cat('k[', i, ']', '=', k.optm[i],'\n')
+  i = i+5
+}
+
+#fitting the model using k=5
+pred <- knn(trainX,testX,trainY,k=26)
+#confusion matrix
+print(table(pred,testY))
+#acuracy
+
+print(accuracy(table(pred,testY)))
+
+
+
+```
+
+If we plot the k - value graph we will get a graph like blow we can assume k = 26 because accuressy is highest at that point = 70.23299
+
+
+```{r}
+plot(k.optm, type="b", xlab="K- Value",ylab="Accuracy level")
+```
+
+#Logistic regression - 
+
+Next, we will fit a logistic regression model in order to predict cardio using columns 1 to 11 
+
+Now using codes from above to split the data into 2 equal halves for training and testing. The glm() function fits generalized glm() linear models, a class of models that includes logistic regression for which we must pass the argument family=binomial in order to tell R to run a logistic regression.
+
+
+Here we can see we have total 15 number of coefficient and P-value is very high 0.54410 for gender means statistical significance of gender to predict the cardio is not significant, similarly statistical significance of gluc2 is also not significant because p-value is high, hence when can either use forward selection or backward elimination to to choose right attributes to create better prediction model.
+
+
+Now we can run the anova() function on the model to analyze the table of deviance, The difference between the null deviance and the residual deviance shows how our model is doing against the null model (a model with only the intercept). The wider this gap, the better here as we can see age, weight , ap-hi , cholesterol have higher significance to calculate the response variable.
+
+Now we use the predict()  function to fit the model into the test data and predict the response variable as we have done in the blow code block  first we created an object and assign response variable value to the that then we can use if else statement to that will change probability to class label 
+
+If probability is greater than 0.5 then class is ‘1’ means he/she  has cardiovascular disease
+If probability is less than 0.5 then class is ‘0’ means he/she doesn't cardiovascular disease
+
+Here  The mean() function can be used to compute the fraction of days for which the prediction was correct. That is equal to the accuracy of the model as we can in below code block we run the model on both halves first on test data and received accuracy of 72.89% and again on training dataset and received the accuracy of 72.75% means there is vary low variance and we will be able to create more accurate model if we use K-fold cross validation and we might be able to minimize the error rate.
+
+
+
+```{r}
+# logistic regression 
+
+train1 <- data[c(1:12)][ran,]
+test1 <- data[c(1:12)][-ran,]
+
+
+glm.fits=glm(cardio~ ., data = train1 ,family =binomial )
+summary (glm.fits)
+
+
+anova(glm.fits , test = "Chisq")
+
+
+fitted.results <- predict(glm.fits, newdata=subset(test1,select=c(1:11)),type='response')
+fitted.results <- ifelse(fitted.results > 0.5,1,0)
+misClasificError <- mean(fitted.results != test1$cardio)
+print(paste('Accuracy',1-misClasificError))
+
+```
+
+#Roc curve
+
+Now using the below code block we can draw the roc curve between true positive rate and false positive rate using below code block.
+
+As we can see the ROC curve is above the diagonal means model is accurately predicting the true positives we can also calculate the ROC - area under curve using the below block of code.
+
+Roc- AUC that we received is 79.28% means the model has correctly predicted 79% true positive correctly aur future aim is to increase this value.
+
+```{r}
+p <- predict(glm.fits, newdata=subset(test1,select=c(1:11)),type='response')
+pr <- prediction(p , test1$cardio)
+prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+plot(prf)
+
+
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+auc
+```
+
+#Naive Bayes Classifier 
+
+Naive Bayes Classifiercomputes the conditional a-posterior probabilities of a categorical class variable given independent predictor variables using the Bayes rule. The standard naive Bayes classifier assumes independence of the predictor variables, and Gaussian distribution given the target class of metric predictors.
+
+Using the above code to split the data as training and testing data and Creating confusion matrix:.
+ 
+Now creating objects x which holds the predictor variables and y which holds the response variable cardio
+
+x = training[1:11]
+y = training$cardio
+ 
+Applying Naive bayes model to predict cardio using columns 1 to 11
+ 
+model <- naiveBayes(x , y)
+ 
+Using predict () function to fit the model into the test and training data to predict the response variable.
+ 
+Using Naive Bayes Classification accuracy of the presence or absence of cardiovascular disease comes out to be 72.04% on test data and 71.91% on training data.
+
+
+```{r}
+# naive bayes 
+# dividing the data in 75% and 25%
+
+indxTrain <- createDataPartition(y = data$cardio ,p = 0.75,list = FALSE)
+
+training <- data[indxTrain,]
+testing <- data[-indxTrain,]
+
+prop.table(table(training$cardio))
+
+#create objects x which holds the predictor variables and y which holds the response variables
+x = training[1:11]
+y = training$cardio
+
+model <- naiveBayes(x , y)
+
+Predict <- predict(model,newdata = testing )
+misClasificError <- mean(Predict != testing$cardio)
+print(paste('Accuracy',1-misClasificError))
+
+Predict <- predict(model,newdata = training )
+misClasificError <- mean(Predict != training$cardio)
+print(paste('Accuracy',1-misClasificError))
+
+
+print(confusionMatrix(Predict , training$cardio))
+
+```
+
+
+#Random forest 
+
+```{r}
+x = training[1:11]
+y = training$cardio
+
+fitRF <- randomForest(y~., x)
+fitting <- predict(fitRF,newdata = testing)
+
+confusionMatrix(fitting , testing$cardio)
+```
+
+# Applying polynomial regression on our logistic regression model 
+
+in below code we tried to implement polynomial regression with varying the degree of polynomial from 1 -10 in whole data set as we can see in graph blew at first accurecy incresed from polynomial degree 1 to 4 then it became constant from 4 to 10 with slight variantion.
+
+
+```{r warning=FALSE}
+## logistic regression with whole dataset 
+
+i=1
+acc= list()
+while (i <= 10){
+  lr.mod <- glm(cardio~ poly(age, i)+gender+poly(height,i)+
+                  poly(weight,i)+poly(ap_hi,i)+cholesterol+gluc+smoke+alco+active ,
+                data = data ,family =binomial )
+  fitted.results <- predict(lr.mod, newdata=subset(data,select=c(1:11)),type='response')
+  fitted.results <- ifelse(fitted.results > 0.5,1,0)
+  misClasificError <- mean(fitted.results == data$cardio)
+  acc[[i]] <- misClasificError
+  i = i+1
+}
+
+acc
+plot(unlist(acc), xlab="Degree of poly",ylab="Accuracy level")
+
+```
+#Applying polynomial regression on our logistic regression model, with - validation set approch
+
+for validation set approch we split the data into two halves training and testing dataset and we tried to fit the model on training data and the using predict function we tried to test model performence on testing dataset. 
+
+in below code we tried to implement polynomial regression with varying the degree of polynomial from 1 -10 in whole data set as we can see in graph blew at first accurecy incresed from polynomial degree 1 to 3 then it became almost constant from 4 to 10 with slight variantion.
+
+
+```{r warning=FALSE}
+#----------------------------------------------------------------------------------
+#---------logistic regression with - validation set approch ----------------------------
+
+
+train1 <- data[c(1:12)][ran,]
+test1 <- data[c(1:12)][-ran,]
+
+
+i=1
+acc= list()
+while (i <= 10){
+  lr.mod <- glm(cardio~ poly(age, i)+gender+poly(height,i)+
+                  poly(weight,i)+poly(ap_hi,i)+cholesterol+gluc+smoke+alco+active ,
+                data = train1 ,family =binomial )
+
+  fitted.results <- predict(lr.mod, newdata=subset(test1,select=c(1:11)),type='response')
+  fitted.results <- ifelse(fitted.results > 0.5,1,0)
+  misClasificError <- mean(fitted.results == test1$cardio)
+  acc[[i]] <- misClasificError
+  i = i+1
+}
+acc
+plot(unlist(acc), xlab="Degree of poly",ylab="Accuracy level")             
+      
+
+```
+
+#applying polynomial regression on our logistic regression model, with - k- fold
+
+for k- fold cross validatio napproch we used cv.glm() function for providing k value(10) as our data set has around 70krows hence it better to have standard 10 fold corss validation and to get error rate.
+
+in below code we tried to implement polynomial regression with varying the degree of polynomial from 1 -10 in whole data set as we can see in graph blew at first accurecy incresed from polynomial degree 1 to 6 then it became almost constant from 6 to 10 with slight variantion.
+
+
+```{r warning=FALSE}
+#---------logistic regression with - k- fold----------------------------
+
+
+i=1
+acc= list()
+while (i <= 10){
+  lr.mod <- glm(cardio~ poly(age, i)+gender+poly(height,i)+
+                  poly(weight,i)+poly(ap_hi,i)+cholesterol+gluc+smoke+alco+active ,
+                data = data ,family =binomial )
+  cv.err =cv.glm(data ,lr.mod , K = 10 )
+  print(cv.err$delta[1])
+  acc[[i]] <- 1- cv.err$delta[1]
+  i = i+1
+}
+
+plot(unlist(acc), xlab="Degree of poly",ylab="Accuracy level")
+```
+
+#NAIVE BAYS WITH WHOLE dataset
+
+Naive bays is a probablistic model we can't introduce the polynomials hense we did standared approch of applying naive bayes on whole dataset and we recived Accuracy 71.99%.
+
+
+```{r}
+
+#------------------------------------------------------------------------------
+#------------------------------NAIVE BAYS WITH WHOLE dataset ---------------------------------
+model <- naiveBayes(data$cardio~ .,
+                    data = data)
+
+Predict <- predict(model,newdata = data )
+misClasificError <- mean(Predict != data$cardio)
+print(paste('Accuracy',1-misClasificError))
+
+```
+
+#Naive bayesS with validation set dataset
+
+For this cross validation approch we split the data into 75% and 25% and fitted the model on training data and then tesyed it on testing data and recived slightly less 71.87% this is may be because of validation set approch overestimates the error rate.
+
+
+```{r}
+
+#------------------------------NAIVE BAYS WITH validation set dataset ---------------------------------
+
+indxTrain <- createDataPartition(y = data$cardio ,p = 0.75,list = FALSE)
+
+training <- data[indxTrain,]
+testing <- data[-indxTrain,]
+
+#-- Using the above code to split the data as training and testing data and Creating confusion matrix
+
+prop.table(table(training$cardio))
+
+#create objects x which holds the predictor variables and y which holds the response variables
+x = training[1:11]
+y = training$cardio
+
+#-- Applying Naive bayes model to predict cardio usingcolumns 1 to 11
+
+model <- naiveBayes(x , y)
+
+#-- Using predict () function to fit the model into thetest and training data to predict the response variable.
+
+Predict <- predict(model,newdata = testing )
+misClasificError <- mean(Predict != testing$cardio)
+print(paste('Accuracy',1-misClasificError))
+
+Predict <- predict(model,newdata = training )
+misClasificError <- mean(Predict != training$cardio)
+print(paste('Accuracy',1-misClasificError))
+
+
+confusionMatrix(Predict , training$cardio)
+
+
+```
+
+#Naive bayesS with K - FOLD 
+
+for k- fold cross validatio napproch we used trainControl() function for providing k value(10) as our data set has arounf 70krows hence it better to have standard 10 fold corss validation to get error rate.
+
+using confusion matrix we got Accuracy (average) :71.98% that is similler to whole dataset approch and higher then validation set approch.
+
+
+
+
+```{r warning=FALSE}
+#----------------------------------------NAIVE BAYS WITH K - FOLD ----------------------------------------------------
+
+x = data[1:11]
+y = data$cardio
+
+train_control <- trainControl(
+  method = "cv", 
+  number = 10)
+
+nb.m1 <- train(
+  x = x,
+  y = y,
+  method = "nb",
+  trControl = train_control
+)
+
+Predict <- predict(nb.m1,newdata = data )
+misClasificError <- mean(Predict != data$cardio)
+print(paste('Accuracy',1-misClasificError))
+confusionMatrix(nb.m1)
+```
+
+
+# Knn with whole data set
+
+KNN is a probablistic model we can't introduce the polynomials hense we did standared approch of applying knn on whole dataset and we recived Accuracy 73.08%
+
+
+```{r}
+#KNN
+data1 <- data[c(1:11)]
+
+#converting the categorical variables to multiple variables with values 0 and 1 only for KNN
+dummy <- dummyVars(" ~ .", data=data1)
+newdata <- data.frame(predict(dummy, newdata = data1))
+newdata$cardio <- data[12]
+
+trainX <- newdata[c(1:19)]
+testX <- newdata[c(1:19)]
+
+trainY <- newdata[,20]
+trainY <- trainY$cardio
+testY <- newdata[,20]
+testY <- testY$cardio
+
+accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+
+#fitting the model using k=5
+pred <- knn(trainX,testX,trainY,k=26)
+#confusion matrix
+print(table(pred,testY))
+#acuracy
+
+print(accuracy(table(pred,testY)))
+
+```
+
+
+
+#KNN with validation set dataset
+
+For this cross validation approch we split the data into 50% and 50% and fitted the model on training data and then tested it on testing data and recived slightly less 70.51% this is may be because of validation set approch overestimates the error rate.
+
+
+```{r}
+#KNN
+data1 <- data[c(1:11)]
+ncol(data1)
+#converting the categorical variables to multiple variables with values 0 and 1 only for KNN
+dummy <- dummyVars(" ~ .", data=data1)
+newdata <- data.frame(predict(dummy, newdata = data1))
+newdata$cardio <- data[12]
+
+
+#Splitting the dataset
+ran <- sample(1:nrow(newdata), 0.5 * nrow(newdata))
+
+trainX <- newdata[c(1:19)][ran,]
+testX <- newdata[c(1:19)][-ran,]
+
+
+trainY <- newdata[ran,20]
+trainY <- trainY$cardio
+
+testY <- newdata[-ran,20]
+testY <- testY$cardio
+
+
+accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+
+#fitting the model using k=5
+pred <- knn(trainX,testX,trainY,k=26)
+#confusion matrix
+print(table(pred,testY))
+#acuracy
+
+print(accuracy(table(pred,testY)))
+```
+#### Cross Validation for KNN 
+
+```{r}
+#### Cross Validation for KNN 
+trainData <- newdata[c(1:19)]
+trainLabel <- newdata[20]
+set.seed(1)
+#5 fold cross validation
+y <- newdata[[20]]
+y <- y$cardio
+idx <- createFolds(y, k=5)
+sapply(idx, length)
+error5Fold <- c()
+accuracy5Fold <- c()
+iteration <- c(1:5)
+for (i in 1:5) {
+  pred <- knn(train=trainData[ -idx[[i]] , ], test=trainData[ idx[[i]], ], cl=trainLabel$cardio[ -idx[[i]] , ], k=26)
+  print(paste0(i,") error rate: ", round(mean(trainLabel$cardio[ idx[[i]], ] != pred),3)))
+  error5Fold[i] <- round(mean(trainLabel$cardio[ idx[[i]], ] != pred),3)
+  print(accuracy(table(pred,trainLabel$cardio[ idx[[i]], ])))
+  accuracy5Fold[i] <- accuracy(table(pred,trainLabel$cardio[ idx[[i]], ]))
+}
+error5Fold
+accuracy5Fold
+Fold5 <- data.frame(iteration,error5Fold,accuracy5Fold)
+Fold5
+ggplot(Fold5, aes(x = iteration, y = accuracy5Fold)) +
+  geom_line()
+ggplot(Fold5, aes(x = iteration, y = error5Fold)) +
+  geom_line()
+```
+
+
+```{r}
+#10 fold cross validation 
+idx <- createFolds(y, k=10)
+sapply(idx, length)
+error10Fold <- c()
+accuracy10Fold <- c()
+iteration <- c(1:10)
+for (i in 1:10) {
+  pred <- knn(train=trainData[ -idx[[i]] , ], test=trainData[ idx[[i]], ], cl=trainLabel$cardio[ -idx[[i]] , ], k=26)
+  print(paste0(i,") error rate: ", round(mean(trainLabel$cardio[ idx[[i]], ] != pred),3)))
+  error10Fold[i] <- round(mean(trainLabel$cardio[ idx[[i]], ] != pred),3)
+  print(accuracy(table(pred,trainLabel$cardio[ idx[[i]], ])))
+  accuracy10Fold[i] <- accuracy(table(pred,trainLabel$cardio[ idx[[i]], ]))
+}
+error10Fold
+accuracy10Fold
+Fold10 <- data.frame(iteration,error10Fold,accuracy10Fold)
+Fold10
+ggplot(Fold10, aes(x = iteration, y = accuracy10Fold)) +
+  geom_line()
+ggplot(Fold10, aes(x = iteration, y = error10Fold)) +
+  geom_line()
+
+
+```
+
+#Bootstarp 
+
+```{r message=FALSE, warning=FALSE}
+lr.mod <- glm(cardio ~ age + height +
+                weight + ap_hi + ap_lo, 
+              data = data ,family = "binomial")
+summary(lr.mod)
+
+# Setting up the non-parametric bootstrap
+logit.bootstrap <- function(data, indices) {
+  d <- data[indices, ]
+  fit <- glm(cardio ~ age + height +
+               weight + ap_hi + ap_lo, 
+             data = d ,family = "binomial")
+  
+  return(coef(fit))
+}
+nrow(data)
+logit.bootstrap(data=data, 1:68586)
+
+set.seed(956)
+# using sample to randomly select 100 observations from the range 1 to 100, with replacement.
+logit.bootstrap(data=data, sample(100, 68586, replace = TRUE))
+
+logit.boot <- boot(data=data, logit.bootstrap, R= 1000) # 1000 samples
+logit.boot
+
+# Calculate confidence intervals for each coefficient
+
+boot.ci(logit.boot, type="basic", index=1)  # intercept
+boot.ci(logit.boot, type="basic", index=2)  # age
+boot.ci(logit.boot, type="basic", index=3)  # height
+boot.ci(logit.boot, type="basic", index=4)  # weight
+boot.ci(logit.boot, type="basic", index=5)  # ap_hi
+boot.ci(logit.boot, type="basic", index=6)  # ap_lo
+
+plot(logit.boot, index=1) # intercept
+plot(logit.boot, index=2) # age
+plot(logit.boot, index=3) # height
+plot(logit.boot, index=4) # weight
+plot(logit.boot, index=5) # ap_hi
+plot(logit.boot, index=6) # ap_lo
+
+
+```
+
+
+
+# additional work before D5
+
+```{r}
+newdata <- data
+
+newdata$bmi <- (newdata$weight)/(newdata$height/100)**2
+newdata$height = NULL
+newdata$weight = NULL
+ndata <- newdata[,c(1:9,11,10)]
+
+
+
+glm.fits2=glm(cardio~ ., data = ndata ,family =binomial )
+summary (glm.fits2)
+
+p <- predict(glm.fits2, newdata=ndata[,c(1:10)],type='response')
+p <- ifelse(p > 0.5,1,0)
+
+misClasificError <- mean(p != ndata$cardio)
+print(paste('Accuracy',1-misClasificError))
+
+
+```
+
+# Step wise selection  
+
+To perform best subset selection, we fit a separate least squares regression best subset for each possible combination of the p predictors. That is, we fit all p models selection that contain exactly one predictor, all 
+combination of preditor varibales  = p(p−1)/2 
+models that contain exactly two predictors, and so forth. We then look at all of the resulting models, with the goal of identifying the one that is best.
+
+here as we can see that most important predictor varibale is 'ap_hi' second is 'Age' and least is 'gender' means a person has higher chances of having heart related problums if he and she 
+1. has hight blood pressure level
+2. has higher age 
+3. has higher cholestrol level
+4. has obesity 
+
+and least impactful factors are if he ior she has 
+1. Normal glucose level 
+2. Gender dosnt affect heart problums 
+3. smoking is not affecting heart 
+
+
+```{r}
+library(leaps)
+# Step wise selection 
+
+full.model <-glm(cardio~ ., data = data ,family =binomial )
+
+sub.models <- regsubsets(cardio~ ., data = data , nvmax = 13)
+summary(sub.models)
+
+```
+
+# forward selection 
+
+Forward stepwise selection is a computationally efficient alternative to best subset selection. While the best subset selection procedure considers all 2^p possible models containing subsets of the p predictors, forward stepwise considers a much smaller set of models. Forward stepwise selection begins with a model containing no predictors, and then adds predictors to the model, one-at-a-time, until all of the predictors are in the model.
+
+delta 
+A vector of length two. The first component is the raw cross-validation estimate of prediction error. The second component is the adjusted cross-validation estimate. The adjustment is designed to compensate for the bias introduced by not using leave-one-out cross-validation.
+
+Summery 
+Here we tried to apply forward selection using 2 finction step() and StepAIC()
+total number of predictor variables in our model without applying forward selection 13 including the the varibales with 3 catagorical values  
+
+
+
+
+```{r}
+# forward selection
+ 
+set.seed(123)
+
+# full model
+# Our liner regression model
+lr.mod <-glm(cardio~ ., data = data ,family =binomial )
+
+#forward model using step function 
+forward.model <- step(lr.mod, direction = "forward")
+summary(forward.model)
+
+#best forward.model based on AIC value 
+step.model <- stepAIC(lr.mod, direction = "forward", 
+                      trace = FALSE)
+summary(step.model)
+
+# applying K fold on stepmodel with K = 10
+cv.err =cv.glm(data ,step.model , K = 10)
+print(cv.err$delta[1])
+print(cv.err$delta[2])
+
+#finding accuracy of step.model 
+p <- predict(step.model, data ,type='response')
+p <- ifelse(p > 0.5,1,0)
+accuracy <- mean(p == data$cardio)
+print(paste('Accuracy',accuracy ))
+
+
+
+```
+
+
+## backward selection 
+
+it begins with the full least squares model containing all p predictors, and then iteratively removes the least useful predictor,
+one-at-a-time. its compleatly opposit of forward selection where we increse the number of predictor varibale one by one and find out best model.
+
+delta 
+A vector of length two. The first component is the raw cross-validation estimate of prediction error. The second component is the adjusted cross-validation estimate. The adjustment is designed to compensate for the bias introduced by not using leave-one-out cross-validation.
+
+
+```{r}
+set.seed(123)
+
+# orignal liner regression model
+lr.mod <-glm(cardio~ ., data = data ,family =binomial )
+summary(lr.mod)
+
+# bakward selection using step function
+backward <- step(lr.mod)
+summary(backward)
+
+# backward selection using baest AIC value using StepAIC function
+step.model <- stepAIC(lr.mod, direction = "backward", trace = FALSE)
+summary(step.model)
+
+
+# applying K fold on stepmodel with K = 10
+cv.err =cv.glm(data ,step.model , K = 10)
+print(cv.err$delta[1])
+print(cv.err$delta[2])
+
+# finding accuracy of the forward model
+p <- predict(step.model, data ,type='response')
+p <- ifelse(p > 0.5,1,0)
+accuracy <- mean(p == data$cardio)
+print(paste('Accuracy',accuracy ))
+
+```
+
+
+
+
+#Regulerization techniques
+
+#Rigged regression
+
+Ridge regression uses L2 regularisation to weight/penalise residuals when the parameters of a regression model are being learned. In the context of linear regression, it can be compared to Ordinary Least Square, L2 regularisation is a small addition to the Ordinary Least Square function that weights residuals in a particular way to make the parameters more stable. to avoid overfitting.
+  here lr.mod is our logistic regression model, first we used model.matrix creates a  model matrix, by expanding factors to a set of dummy variables, then we created 2 sets by dividing predictor and response variables df.x and df.y.
+createing a list of lambda values to find optimal lambda that is 'lambdas' 
+
+step-1. 
+creating a rigged regression model to find out change in cofficent with change in lambda values using glmnet() function this function takes predictor and resopnse variable as input and alpha  = 0 represent rigged regression, family = bionomial for logistic regression and output shown as cofficents vs lambda plot, we can see as the lambda value is incresing the value of cofficent are moving towards zero.
+
+step 2
+finding optimal lmbda values using cv.glmnet() function, it returns a plot between deviance vs lambda value and based on the plot we find the best lambda value that is 0.0001995262. 
+
+step 3 
+creating best - rigged regresiion model using optimal lambda value and finding accurecy that is 0.727801592161666, and finding cofficents of ridge_reg2 model these are quite nearer to zero compare to lr.mod the origanl model.
+
+
+#Deviance
+a measurethat plays the role of RSS for a broader class of models. The deviance is negative two times the maximized log-likelihood, the smaller the deviance, the better the fit.
+
+#Mean Square Error
+The MSE will be small if the predicted responses are very close to the true responses, and will be large if for some of the observations, the predicted and true responses differ substantially.
+
+
+```{r}
+set.seed(1234)
+lr.mod <-glm(cardio~ ., data = data ,family =binomial )
+summary(lr.mod)
+
+df <- data
+
+#model.matrix creates a  model matrix, by expanding factors to a set of dummy variables.
+
+df.x = model.matrix(cardio~ .,df )[,-1]
+df.y = df$cardio
+
+
+lambdas <- 10^seq(-5, 2, by = .1)
+
+ridge_reg = glmnet(df.x, df.y, nlambda = 100, alpha = 0 , family = binomial, lambda = lambdas)
+#assess.glmnet(ridge_reg, newx = df.test.x , newy = df.test.y )
+plot(ridge_reg, xvar = "lambda")
+
+#to find out optimal lambda
+#Cross-Validation For Glmnet Does k-fold cross-validation for glmnet, produces a plot, and returns a value for lambda, I have not defined nfold as default is 10
+
+cv_ridge <- cv.glmnet(df.x, df.y, nlambda = 100, alpha = 0 , family = binomial, lambda = lambdas)
+optimal_lambda <- cv_ridge$lambda.min
+print(optimal_lambda)
+plot(cv_ridge)
+
+#---------------------------------creating new model with optimal lambda value----------
+
+
+ridge_reg2 = glmnet(df.x, df.y, nlambda = 1, alpha = 0 , family = binomial, lambda = optimal_lambda)
+#summary (ridge_reg2)
+coef(ridge_reg2)
+
+
+fitted.results <- predict(ridge_reg2, newx = df.x)
+#final <- cbind(df.y, fitted.results)
+#head(final)
+fitted.results <- ifelse(fitted.results > 0,1,0)
+misClasificError <- mean(fitted.results != df.y)
+print(paste('Accuracy',1-misClasificError))
+
+
+
+```
+
+
+# lasso Regression
+Lasso regression is a parsimonious model that performs L1 regularization. The L1 regularization adds a penalty equivalent to the absolute magnitude of regression coefficients and tries to minimize them. 
+
+first we used model.matrix creates a  model matrix, by expanding factors to a set of dummy variables, then we created 2 sets by dividing predictor and response variables df.x and df.y.
+createing a list of lambda values to find optimal lambda that is 'lambdas' 
+
+step-1. 
+creating a lasso regression model to find out change in cofficent with change in lambda values using glmnet() function this function takes predictor and resopnse variable as input and alpha  = 1 represent lasso regression, family = bionomial for logistic regression and output shown as cofficents vs lambda plot, we can see as the lambda value is incresing the value of cofficent are diverging towards zero one by one.
+
+step 2
+finding optimal lmbda values using cv.glmnet() function, it returns a plot between deviance vs lambda value and based on the plot we find the best lambda value that is 0.0001584893. 
+
+step 3 
+creating best - lasso regression model using optimal lambda value and finding accurecy that is 0.727816172396699, and finding cofficents of lasso.best we can see the predictors are presnt in lasso.best model as none of the cofficent is 0 for optimal lambda, means we need all the predictors and none of this predictors are causing over-fitting.
+
+```{r}
+
+set.seed(1234)
+lr.mod <-glm(cardio~ ., data = data ,family =binomial )
+summary(lr.mod)
+
+df <- data
+
+#model.matrix creates a  model matrix, by expanding factors to a set of dummy variables.
+df.x = model.matrix(cardio~ .,df )[,-1]
+df.y = df$cardio
+
+#range of lambda values
+lambdas <- 10^seq(-5, 2, by = .1)
+
+#creating lasso model with range of lambda values to see change in daviance 
+lasso.mod = glmnet(df.x,df.y, alpha=1, family = "binomial", lambda= lambdas) 
+plot(lasso.mod)
+
+# founding optimal lambda value With K fold cross validation 
+
+cv.lasso =cv.glmnet(df.x,df.y, alpha=1, family = binomial, lambda = lambdas)
+plot(cv.lasso)
+
+# finding optimal lambda value with $lambda.min
+optimal_lambda = cv.lasso$lambda.min
+print(optimal_lambda)
+
+
+# now with optimal lambda value creating best lasso model
+lasso.best=glmnet(df.x,df.y,alpha=1,family = "binomial",lambda= optimal_lambda) 
+coef(lasso.best)
+
+lasso.pred = predict(lasso.best,s= optimal_lambda , newx = df.x )
+fitted.results <- ifelse(lasso.pred > 0,1,0)
+error <- mean(fitted.results != df.y)
+print(paste('Accuracy',1- error))
+
+
+```
+
+```{r}
+library(gam)  # To search on the gam function 
+
+gamdata <- ndata
+
+logitgam.m1<-gam(cardio ~ s(age,df=5) + s(bmi,df=4) + cholesterol + gluc ,data=gamdata,family=binomial)
+#in the above function s() is the shorthand for fitting smoothing splines 
+#in gam() function
+
+summary(logitgam.m1)
+par(mfrow=c(1,4))
+plot(logitgam.m1, se=TRUE,col="blue") #se stands for standard error Bands
+
+#model which is Linear in variable ‘bmi’.
+logitgam.m2<-gam(cardio ~ s(age,df=5) + bmi + cholesterol + gluc,data=gamdata,family=binomial)
+plot(logitgam.m2,se=TRUE)
+
+#anova() function is to test the goodness of fit and choose the best Model
+
+anova(logitgam.m1,logitgam.m2, test = "Chisq") 
+#Using Chi-squared Non parametric Test for Binary Classification Problem and categorical Target
+
+logitgam.m3<-gam(cardio ~ s(age,df=5) + s(ap_hi, df= 6) + cholesterol + gluc,data=gamdata,family=binomial)
+plot(logitgam.m3,se=TRUE)
+
+#model which is Linear in variable ‘ap_hi’
+logitgam.m4<-gam(cardio ~ s(age,df=5) + ap_hi + cholesterol + gluc,data=gamdata,family=binomial)
+plot(logitgam.m4,se=TRUE)
+
+anova(logitgam.m3,logitgam.m4, test = "Chisq") 
+
+
+
+
+```
+```{r}
+
+
+logitgam.mod1 <-gam(cardio ~ s(age,df=4) + s(bmi,df=4) 
+                 + s(ap_hi ,df = 4) + s(ap_lo ,df = 4)+cholesterol + gluc ,data=gamdata,family=binomial)
+
+logitgam.mod2 <-gam(cardio ~ s(age,df=4) + s(bmi,df=4) 
+                 + s(ap_hi ,df = 4) + ap_lo +cholesterol + gluc ,data=gamdata,family=binomial)
+
+logitgam.mod3 <-gam(cardio ~ s(age,df=4) + s(bmi,df=4) 
+                 + ap_hi + ap_lo +cholesterol + gluc ,data=gamdata,family=binomial)
+
+logitgam.mod4 <-gam(cardio ~ s(age,df=4) + bmi 
+                 + ap_hi + ap_lo +cholesterol + gluc ,data=gamdata,family=binomial)
+
+summary(logitgam.mod1)
+summary(logitgam.mod2)
+summary(logitgam.mod3)
+summary(logitgam.mod4)
+
+par(mfrow=c(1,4))
+plot(logitgam.mod1, se=TRUE,col="blue")
+par(mfrow=c(1,4))
+plot(logitgam.mod2, se=TRUE,col="blue")
+par(mfrow=c(1,4))
+plot(logitgam.mod3, se=TRUE,col="blue")
+par(mfrow=c(1,4))
+plot(logitgam.mod4, se=TRUE,col="blue")
+
+anova(logitgam.mod1,logitgam.mod2,logitgam.mod3,logitgam.mod4 ,test = "Chisq") 
+
+
+```
+
+
